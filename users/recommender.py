@@ -2,7 +2,6 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
-from random import seed, shuffle
 
 from app.models.event import Event
 from app.models.user import User
@@ -263,10 +262,13 @@ def recommend_events(df_old_users, df_new_user, num_events=5):
     mask1 = df_old_users.event_id.isin(possible_events)
 
     recommended_events = []
+
     for user in most_similar_users:
         mask2 = df_old_users.user_id == user
-        events = df_old_users.loc[mask1 & mask2, 'event_id']
-        for event in events:
+        mask3 = df_old_users.rating == 1
+        events = list(df_old_users.loc[mask1 & mask2 & mask3, 'event_id'])
+        np.random.shuffle(events)
+        for event in set(events):
             recommended_events.append(event)
             if len(recommended_events) >= num_events:
                 print('number of rec events: ' , len(recommended_events))
@@ -289,15 +291,16 @@ def set_recommended_events(user_id, ratings_from_db = True, fill_factor = 0.3):
     df_new_user = set_ratings_of_user(user_id)
     user = User.objects(id=user_id).first()
 
-    user.set_recommended_events(recommend_events(df_old_users, df_new_user))
+    recommended_events = recommend_events(df_old_users, df_new_user)
+    user.set_recommended_events(recommended_events)
 
-#if __name__ == "__main__":
-#    from flask import Flask
-#    from flask_mongoengine import MongoEngine
-#    app = Flask(__name__)
-#    app.config['MONGODB_DB'] = 'bcneventer'
-#    app.config['MONGODB_HOST'] = "mongodb://localhost:27017/bcneventer"
-#    db = MongoEngine(app)
-#    set_recommended_events('5c19fad44561a90006f4e761')
+if __name__ == "__main__":
+    from flask import Flask
+    from flask_mongoengine import MongoEngine
+    app = Flask(__name__)
+    app.config['MONGODB_DB'] = 'bcneventer'
+    app.config['MONGODB_HOST'] = "mongodb://localhost:27017/bcneventer"
+    db = MongoEngine(app)
+    set_recommended_events('5c1a8d834561a90005fe277b')
 
 
